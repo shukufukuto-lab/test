@@ -344,7 +344,9 @@ def kpi_row(metrics: list[dict]):
             c = color_map.get(m.get("color", "blue"), "#6378ff")
             delta_html = ""
             if "delta" in m:
-                sign = "▲" if float(str(m["delta"]).replace("%","").replace("+","")) >= 0 else "▼"
+                import re as _re
+                _num = _re.sub(r'[^0-9.\-]', '', str(m["delta"]).replace("+", ""))
+                sign = "▲" if (float(_num) >= 0 if _num else True) else "▼"
                 d_color = "#34d399" if sign == "▲" else "#f87171"
                 delta_html = f'<span style="font-size:12px;color:{d_color};">{sign} {m["delta"]}</span>'
             st.markdown(f"""
@@ -656,6 +658,20 @@ def main():
     if "results" not in st.session_state:
         st.session_state.results = []
 
+    # Auto-load demo result via ?demo=1 URL param (for screenshots / demos)
+    params = st.query_params
+    if params.get("demo") == "1" and not st.session_state.query_history:
+        demo = DEMO_RESPONSES["default"]
+        demo_q = "今月の売上トップ10商品を地域別に教えてください"
+        st.session_state.query_history.append(demo_q)
+        st.session_state.results.append({
+            "question": demo_q,
+            "sql": demo["sql"],
+            "df": demo["df"],
+            "summary": demo["summary"],
+        })
+        st.session_state["_demo_trigger"] = demo_q
+
     # Sidebar
     selected_dm, selected_model, show_sql, show_summary, show_chart = render_sidebar()
 
@@ -743,6 +759,12 @@ def main():
                 ]
             ]) + """</div>""", unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
+
+        # Auto-trigger for demo mode
+        auto_q = st.session_state.pop("_demo_trigger", None)
+        if auto_q:
+            submit = True
+            user_input = auto_q
 
         # ── Process query ──
         if submit and user_input.strip():
