@@ -1,0 +1,12 @@
+# Snowflake Streamlit in Snowflake (SiS) — environment configuration
+# Packages listed here are automatically available in the SiS runtime.
+# When running locally, install with: pip install -r requirements.txt
+
+name: executive-ai-dashboard
+channels:
+  - snowflake
+
+dependencies:
+  - streamlit>=1.26.0
+  - pandas>=1.5.0
+  - snowflake-snowpark-python

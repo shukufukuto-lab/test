@@ -1,0 +1,5 @@
+# Local development requirements
+# For Snowflake SiS deployment, use environment.yml instead
+
+streamlit>=1.26.0
+pandas>=1.5.0
