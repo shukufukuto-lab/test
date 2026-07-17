@@ -12,6 +12,21 @@ export default function LoginPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  async function oauthLogin(provider: "google" | "apple") {
+    setBusy(true);
+    setMessage(null);
+    const supabase = getBrowserClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (error) {
+      setMessage(error.message);
+      setBusy(false);
+    }
+    // 成功時はプロバイダのページへリダイレクトされる
+  }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -45,6 +60,30 @@ export default function LoginPage() {
       <h1 className="text-2xl font-bold">
         {mode === "login" ? "ログイン" : "アカウント作成"}
       </h1>
+
+      <div className="flex flex-col gap-3">
+        <button
+          onClick={() => oauthLogin("google")}
+          disabled={busy}
+          className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 py-3 font-medium transition hover:bg-gray-50 disabled:opacity-50"
+        >
+          Google でつづける
+        </button>
+        <button
+          onClick={() => oauthLogin("apple")}
+          disabled={busy}
+          className="flex items-center justify-center gap-2 rounded-lg bg-black py-3 font-medium text-white transition hover:bg-gray-800 disabled:opacity-50"
+        >
+          Apple でつづける
+        </button>
+      </div>
+
+      <div className="flex items-center gap-3 text-xs text-gray-400">
+        <span className="h-px flex-1 bg-gray-200" />
+        またはメールアドレスで
+        <span className="h-px flex-1 bg-gray-200" />
+      </div>
+
       <form onSubmit={submit} className="flex flex-col gap-4">
         <input
           type="email"
