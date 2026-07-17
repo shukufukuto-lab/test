@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "memory-keeper",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-03-25",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  }
+  // シークレット (ANTHROPIC_API_KEY 等) は `npx wrangler secret put <NAME>` で登録する。
+  // NEXT_PUBLIC_* はビルド時に埋め込まれるため .env に置いてから build する。
+}

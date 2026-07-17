@@ -14,7 +14,7 @@
 | 認証 + DB | Supabase (メール認証 / Postgres + RLS) |
 | 決済 | Stripe (Checkout + Webhook、月50円サブスク) |
 | LLM | Claude API — `claude-haiku-4-5` (コスト設計に基づく) |
-| ホスティング | Vercel |
+| ホスティング | Cloudflare Workers (@opennextjs/cloudflare) |
 
 ## 機能 (MVP スコープ)
 
@@ -71,24 +71,39 @@ npm run dev
 # http://localhost:3000
 ```
 
-## デプロイ
+## デプロイ (Cloudflare Workers)
 
-### 検証フェーズ (無料): Vercel Hobby
+無料枠で商用利用可 (1日10万リクエストまで)。[@opennextjs/cloudflare](https://opennext.js.org/cloudflare)
+アダプタを導入済みで、設定は `wrangler.jsonc` / `open-next.config.ts` にある。
 
-1. このリポジトリを Vercel にインポートし、**Root Directory を `web` に設定**
-2. `.env.example` の環境変数をすべて Vercel の Environment Variables に登録
-   (`NEXT_PUBLIC_APP_URL` はデプロイ後の URL)
-3. デプロイ後、Stripe Webhook の URL を本番 URL に更新
-4. Supabase の Authentication → URL Configuration に本番 URL を追加
+```bash
+# 1. Cloudflare アカウントでログイン (初回のみ。ブラウザが開く)
+npx wrangler login
 
-> ⚠️ Vercel の Hobby (無料) プランは**非商用利用限定**。決済を有効にして実際に課金を始める時点で、
-> Vercel Pro ($20/月) に上げるか、無料枠でも商用利用可の Cloudflare Workers
-> ([@opennextjs/cloudflare](https://opennext.js.org/cloudflare) でデプロイ) へ移行する。
+# 2. サーバー側シークレットを登録 (初回のみ)
+npx wrangler secret put ANTHROPIC_API_KEY
+npx wrangler secret put STRIPE_SECRET_KEY
+npx wrangler secret put STRIPE_WEBHOOK_SECRET
+npx wrangler secret put STRIPE_PRICE_ID
+npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 
-### 無料のまま商用公開する場合: Cloudflare Workers
+# 3. NEXT_PUBLIC_* はビルド時に埋め込まれるため .env に置く
+#    (NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY / NEXT_PUBLIC_APP_URL)
+cp .env.example .env  # 値を埋める
 
-Cloudflare の無料枠は商用利用可 (1日10万リクエストまで)。`@opennextjs/cloudflare`
-アダプタで Next.js をそのままデプロイできる。検証が済んで課金を開始する際の第一候補。
+# 4. デプロイ
+npm run deploy
+# → https://memory-keeper.<account>.workers.dev が発行される
+
+# ローカルで Workers ランタイム込みの動作確認をしたい場合
+npm run preview
+```
+
+デプロイ後にやること:
+
+1. 発行された URL を `.env` の `NEXT_PUBLIC_APP_URL` に設定して再デプロイ
+2. Stripe Webhook のエンドポイント URL を `https://<発行URL>/api/stripe/webhook` に設定
+3. Supabase の Authentication → URL Configuration の Site URL / Redirect URLs に発行 URL を追加
 
 ## 構成
 

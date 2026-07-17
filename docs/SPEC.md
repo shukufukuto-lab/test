@@ -122,4 +122,4 @@
 - 2026-07-15: 価格は月50円プランで前進(無料枠=記録10件で原価上限を担保)
 - 2026-07-15: MVPを実装(`web/`)。Next.js 16 + Supabase + Stripe + Claude Haiku。PoCはWebアプリ単体で行い、LINE入口は検証後に追加
 - 2026-07-15: 認証はメール+Google/Appleソーシャルログイン(Supabase OAuth)。LINEログインはSupabase標準プロバイダ外のため、LINE Bot入口の実装時に LINE Login (OIDC) を独自連携する
-- 2026-07-15: デプロイは検証中=Vercel Hobby(無料・非商用限定)、課金開始時=Cloudflare Workers無料枠(商用可)または Vercel Pro へ移行
+- 2026-07-15: デプロイ先は Cloudflare Workers に決定(無料枠で商用利用可)。@opennextjs/cloudflare アダプタを導入済み
