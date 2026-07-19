@@ -1,26 +1,83 @@
 @import "tailwindcss";
 
+/*
+ * Memory Keeper design tokens.
+ * Warm, nostalgic "paper + amber" palette. All surfaces are driven by CSS
+ * variables so light / dark themes stay coherent instead of only flipping the
+ * page background.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #faf6f0;
+  --foreground: #241f1b;
+
+  --card: #ffffff;
+  --card-border: #ece3d5;
+
+  --muted: #7a6f63;
+  --subtle: #9c9186;
+
+  --brand: #c15f2c;
+  --brand-hover: #a94e20;
+  --brand-foreground: #ffffff;
+  --brand-soft: #fbeee2;
+  --brand-soft-foreground: #8a3d17;
+
+  --input: #ffffff;
+  --input-border: #e2d8c9;
+  --ring: #d9834f;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #17130f;
+    --foreground: #ece6df;
+
+    --card: #211b15;
+    --card-border: #362c22;
+
+    --muted: #a89a8b;
+    --subtle: #8a7d6f;
+
+    --brand: #e0793f;
+    --brand-hover: #ec8c56;
+    --brand-foreground: #1a1206;
+    --brand-soft: #2a2015;
+    --brand-soft-foreground: #f0c395;
+
+    --input: #1d1811;
+    --input-border: #3a2f24;
+    --ring: #c96a37;
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-border: var(--card-border);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-soft-foreground: var(--brand-soft-foreground);
+  --color-input: var(--input);
+  --color-input-border: var(--input-border);
+  --color-ring: var(--ring);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--brand-soft);
+  color: var(--brand-soft-foreground);
 }

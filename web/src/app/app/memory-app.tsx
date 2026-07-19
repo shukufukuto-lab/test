@@ -14,6 +14,8 @@ type Memory = {
   created_at: string;
 };
 
+const FREE_LIMIT = 10;
+
 export default function MemoryApp({
   email,
   subscriptionStatus,
@@ -28,7 +30,10 @@ export default function MemoryApp({
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{
+    text: string;
+    tone: "info" | "error";
+  } | null>(null);
 
   const isPro = subscriptionStatus === "active";
 
@@ -65,17 +70,21 @@ export default function MemoryApp({
         body: JSON.stringify({ text: recordText }),
       });
       if (res.status === 402) {
-        setNotice(
-          "無料枠 (10件) に達しました。月50円のプランで無制限に記録できます。",
-        );
+        setNotice({
+          text: "無料枠 (10件) に達しました。月50円のプランで無制限に記録できます。",
+          tone: "info",
+        });
         return;
       }
       if (!res.ok) throw new Error("記録に失敗しました");
       setRecordText("");
-      setNotice("記録しました!");
+      setNotice({ text: "記録しました!", tone: "info" });
       await loadMemories();
     } catch (err) {
-      setNotice(err instanceof Error ? err.message : "エラーが発生しました");
+      setNotice({
+        text: err instanceof Error ? err.message : "エラーが発生しました",
+        tone: "error",
+      });
     } finally {
       setBusy(false);
     }
@@ -118,125 +127,186 @@ export default function MemoryApp({
     router.refresh();
   }
 
+  const used = memories.length;
+  const remaining = Math.max(0, FREE_LIMIT - used);
+  const usagePct = Math.min(100, (used / FREE_LIMIT) * 100);
+
   return (
-    <main className="mx-auto min-h-screen max-w-2xl px-4 py-8">
-      <header className="mb-8 flex items-center justify-between">
-        <h1 className="text-xl font-bold text-amber-700">Memory Keeper (仮)</h1>
-        <div className="flex items-center gap-3 text-sm">
-          <span className="text-gray-500">{email}</span>
-          <span
-            className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-              isPro ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-500"
-            }`}
-          >
-            {isPro ? "Pro" : "Free"}
-          </span>
-          <button onClick={signOut} className="text-gray-400 underline">
-            ログアウト
-          </button>
+    <div className="flex flex-1 flex-col">
+      <header className="sticky top-0 z-10 border-b border-card-border bg-background/80 backdrop-blur">
+        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3.5">
+          <span className="font-bold text-brand">Memory Keeper（仮）</span>
+          <div className="flex items-center gap-3 text-sm">
+            <span
+              className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                isPro
+                  ? "bg-brand-soft text-brand-soft-foreground"
+                  : "bg-card text-subtle ring-1 ring-card-border"
+              }`}
+            >
+              {isPro ? "Pro" : "Free"}
+            </span>
+            <span className="hidden text-muted sm:inline">{email}</span>
+            <button
+              onClick={signOut}
+              className="text-subtle transition hover:text-foreground"
+            >
+              ログアウト
+            </button>
+          </div>
         </div>
       </header>
 
-      {!isPro && (
-        <div className="mb-6 flex items-center justify-between rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm">
-          <span>
-            記録 {memories.length}/10 件 (無料枠) — 月50円で無制限に
-          </span>
-          <button
-            onClick={upgrade}
-            disabled={busy}
-            className="rounded-full bg-amber-600 px-4 py-1.5 font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
-          >
-            アップグレード
-          </button>
+      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-8">
+        {!isPro && (
+          <div className="mb-6 rounded-2xl border border-card-border bg-card p-4 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold">
+                  無料枠 {used}/{FREE_LIMIT} 件
+                </p>
+                <p className="mt-0.5 text-xs text-muted">
+                  {remaining > 0
+                    ? `あと${remaining}件記録できます。月50円で無制限に。`
+                    : "上限に達しました。月50円で無制限に。"}
+                </p>
+              </div>
+              <button
+                onClick={upgrade}
+                disabled={busy}
+                className="flex-none rounded-full bg-brand px-4 py-2 text-sm font-semibold text-brand-foreground transition hover:bg-brand-hover disabled:opacity-50"
+              >
+                アップグレード
+              </button>
+            </div>
+            <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-brand-soft">
+              <div
+                className="h-full rounded-full bg-brand transition-all"
+                style={{ width: `${usagePct}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Segmented tabs */}
+        <div className="mb-6 grid grid-cols-2 gap-1 rounded-full border border-card-border bg-card p-1 shadow-sm">
+          {(["record", "recall"] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`rounded-full py-2 text-sm font-semibold transition ${
+                tab === t
+                  ? "bg-brand text-brand-foreground shadow-sm"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              {t === "record" ? "記録する" : "思い出す"}
+            </button>
+          ))}
         </div>
-      )}
 
-      <div className="mb-6 flex gap-2">
-        <button
-          onClick={() => setTab("record")}
-          className={`rounded-full px-5 py-2 text-sm font-semibold ${
-            tab === "record" ? "bg-amber-600 text-white" : "bg-gray-100 text-gray-600"
-          }`}
-        >
-          記録する
-        </button>
-        <button
-          onClick={() => setTab("recall")}
-          className={`rounded-full px-5 py-2 text-sm font-semibold ${
-            tab === "recall" ? "bg-amber-600 text-white" : "bg-gray-100 text-gray-600"
-          }`}
-        >
-          思い出す
-        </button>
-      </div>
-
-      {tab === "record" ? (
-        <section className="flex flex-col gap-4">
-          <textarea
-            value={recordText}
-            onChange={(e) => setRecordText(e.target.value)}
-            rows={3}
-            placeholder="例: 昨日 太郎と下北沢で飲んだ。転職の相談をされた"
-            className="rounded-xl border border-gray-300 px-4 py-3"
-          />
-          <button
-            onClick={record}
-            disabled={busy || !recordText.trim()}
-            className="self-end rounded-full bg-amber-600 px-6 py-2 font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
-          >
-            {busy ? "AIが整理中..." : "記録する"}
-          </button>
-        </section>
-      ) : (
-        <section className="flex flex-col gap-4">
-          <div className="flex gap-2">
-            <input
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              placeholder="例: 太郎と最後に会ったのいつだっけ?"
-              className="flex-1 rounded-xl border border-gray-300 px-4 py-3"
-              onKeyDown={(e) => e.key === "Enter" && !busy && ask()}
+        {tab === "record" ? (
+          <section className="flex flex-col gap-3">
+            <textarea
+              value={recordText}
+              onChange={(e) => setRecordText(e.target.value)}
+              rows={3}
+              placeholder="例: 昨日 太郎と下北沢で飲んだ。転職の相談をされた"
+              className="resize-none rounded-2xl border border-input-border bg-input px-4 py-3 outline-none transition placeholder:text-subtle focus:border-brand focus:ring-2 focus:ring-ring/40"
             />
             <button
-              onClick={ask}
-              disabled={busy || !question.trim()}
-              className="rounded-full bg-amber-600 px-6 py-2 font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+              onClick={record}
+              disabled={busy || !recordText.trim()}
+              className="self-end rounded-full bg-brand px-6 py-2.5 font-semibold text-brand-foreground transition hover:bg-brand-hover disabled:opacity-50"
             >
-              {busy ? "..." : "聞く"}
+              {busy ? "AIが整理中..." : "記録する"}
             </button>
-          </div>
-          {answer && (
-            <div className="whitespace-pre-wrap rounded-xl bg-amber-50 px-4 py-3 text-sm leading-relaxed">
-              {answer}
+          </section>
+        ) : (
+          <section className="flex flex-col gap-3">
+            <div className="flex gap-2">
+              <input
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                placeholder="例: 太郎と最後に会ったのいつだっけ?"
+                className="flex-1 rounded-full border border-input-border bg-input px-5 py-3 outline-none transition placeholder:text-subtle focus:border-brand focus:ring-2 focus:ring-ring/40"
+                onKeyDown={(e) => e.key === "Enter" && !busy && ask()}
+              />
+              <button
+                onClick={ask}
+                disabled={busy || !question.trim()}
+                className="flex-none rounded-full bg-brand px-6 py-2.5 font-semibold text-brand-foreground transition hover:bg-brand-hover disabled:opacity-50"
+              >
+                {busy ? "..." : "聞く"}
+              </button>
             </div>
-          )}
+            {answer && (
+              <div className="flex gap-3 rounded-2xl border border-card-border bg-brand-soft px-4 py-3.5">
+                <span className="text-lg leading-none">💬</span>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-brand-soft-foreground">
+                  {answer}
+                </p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {notice && (
+          <p
+            className={`mt-4 text-sm ${
+              notice.tone === "error" ? "text-red-600" : "text-brand-soft-foreground"
+            }`}
+          >
+            {notice.text}
+          </p>
+        )}
+
+        <section className="mt-10">
+          <h2 className="mb-3 text-sm font-semibold text-muted">
+            最近の思い出（{used}件）
+          </h2>
+          <ul className="flex flex-col gap-3">
+            {memories.map((m) => (
+              <li
+                key={m.id}
+                className="rounded-2xl border border-card-border bg-card px-4 py-3.5 shadow-sm transition hover:shadow-md"
+              >
+                <p className="text-sm font-medium leading-relaxed">
+                  {m.summary ?? m.raw_text}
+                </p>
+                <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs">
+                  <span className="text-subtle">
+                    {m.occurred_on ?? "日付不明"}
+                  </span>
+                  {m.people.map((p) => (
+                    <span
+                      key={p}
+                      className="rounded-full bg-brand-soft px-2 py-0.5 font-medium text-brand-soft-foreground"
+                    >
+                      {p}
+                    </span>
+                  ))}
+                  {m.place && (
+                    <span className="rounded-full bg-card px-2 py-0.5 text-muted ring-1 ring-card-border">
+                      📍 {m.place}
+                    </span>
+                  )}
+                </div>
+              </li>
+            ))}
+            {memories.length === 0 && (
+              <li className="rounded-2xl border border-dashed border-card-border px-4 py-10 text-center">
+                <p className="text-2xl">🕊️</p>
+                <p className="mt-2 text-sm text-muted">
+                  まだ記録がありません。
+                  <br />
+                  「記録する」から最初の思い出を残してみましょう。
+                </p>
+              </li>
+            )}
+          </ul>
         </section>
-      )}
-
-      {notice && <p className="mt-4 text-sm text-amber-700">{notice}</p>}
-
-      <section className="mt-10">
-        <h2 className="mb-3 text-sm font-semibold text-gray-500">
-          最近の思い出 ({memories.length}件)
-        </h2>
-        <ul className="flex flex-col gap-3">
-          {memories.map((m) => (
-            <li key={m.id} className="rounded-xl border border-gray-200 px-4 py-3">
-              <p className="text-sm font-medium">{m.summary ?? m.raw_text}</p>
-              <p className="mt-1 text-xs text-gray-400">
-                {m.occurred_on ?? "日付不明"} / {m.people.join("、") || "人物未記録"}
-                {m.place ? ` / ${m.place}` : ""}
-              </p>
-            </li>
-          ))}
-          {memories.length === 0 && (
-            <li className="text-sm text-gray-400">
-              まだ記録がありません。「記録する」から最初の思い出を残してみましょう。
-            </li>
-          )}
-        </ul>
-      </section>
-    </main>
+      </main>
+    </div>
   );
 }
