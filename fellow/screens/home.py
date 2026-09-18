@@ -1,6 +1,7 @@
 import flet as ft
 from datetime import datetime
 import db
+import sync
 
 _timer_state = {"running": False, "start_time": None, "project_id": None, "seconds": 0}
 
@@ -86,6 +87,9 @@ def build_home_view(page: ft.Page, staff_id: int):
             end_time.isoformat(timespec="seconds"),
             source="timer",
         )
+        staff_name = db.get_staff_name(staff_id)
+        if staff_name:
+            sync.push_my_actuals(staff_name)
         status_text.value = "停止中"
         status_text.color = ft.Colors.GREY_600
         timer_text.value = "00:00:00"

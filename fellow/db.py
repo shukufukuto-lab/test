@@ -110,6 +110,19 @@ def delete_project(pid):
     conn.close()
 
 
+def replace_all_projects(rows):
+    """ファイルサーバーのCSVでローカルの案件マスタを丸ごと置き換える"""
+    conn = get_conn()
+    conn.execute("DELETE FROM projects")
+    for r in rows:
+        conn.execute(
+            "INSERT INTO projects (id, name, start_date, end_date, keywords, status) VALUES (?, ?, ?, ?, ?, ?)",
+            (r.get("id"), r.get("name"), r.get("start_date"), r.get("end_date"), r.get("keywords"), r.get("status") or "進行中"),
+        )
+    conn.commit()
+    conn.close()
+
+
 # --- Staff ---
 def list_staff():
     conn = get_conn()
@@ -145,6 +158,26 @@ def delete_staff(sid):
     conn.close()
 
 
+def replace_all_staff(rows):
+    """ファイルサーバーのCSVでローカルの要員マスタを丸ごと置き換える"""
+    conn = get_conn()
+    conn.execute("DELETE FROM staff")
+    for r in rows:
+        conn.execute(
+            "INSERT INTO staff (id, name, monthly_capacity_hours) VALUES (?, ?, ?)",
+            (r.get("id"), r.get("name"), float(r.get("monthly_capacity_hours") or 0)),
+        )
+    conn.commit()
+    conn.close()
+
+
+def get_staff_name(staff_id):
+    conn = get_conn()
+    row = conn.execute("SELECT name FROM staff WHERE id=?", (staff_id,)).fetchone()
+    conn.close()
+    return row["name"] if row else None
+
+
 # --- Plans ---
 def get_plan(project_id, staff_id, month):
     conn = get_conn()
@@ -176,6 +209,19 @@ def list_plans_for_month(month):
     rows = conn.execute("SELECT * FROM plans WHERE month=?", (month,)).fetchall()
     conn.close()
     return rows
+
+
+def replace_all_plans(rows):
+    """ファイルサーバーのCSVでローカルの計画工数を丸ごと置き換える"""
+    conn = get_conn()
+    conn.execute("DELETE FROM plans")
+    for r in rows:
+        conn.execute(
+            "INSERT INTO plans (id, project_id, staff_id, month, planned_hours) VALUES (?, ?, ?, ?, ?)",
+            (r.get("id"), r.get("project_id"), r.get("staff_id"), r.get("month"), float(r.get("planned_hours") or 0)),
+        )
+    conn.commit()
+    conn.close()
 
 
 # --- Time entries ---
@@ -212,6 +258,44 @@ def list_time_entries_for_date(staff_id, date_str):
     ).fetchall()
     conn.close()
     return rows
+
+
+def list_all_time_entries_for_staff_name(staff_name):
+    """自分の全実績を取得(ファイルサーバーへの書き出し用)"""
+    conn = get_conn()
+    rows = conn.execute(
+        """
+        SELECT te.id, te.project_id, te.staff_id, te.start_time, te.end_time, te.source, te.memo
+        FROM time_entries te
+        JOIN staff s ON s.id = te.staff_id
+        WHERE s.name = ?
+        ORDER BY te.start_time
+        """,
+        (staff_name,),
+    ).fetchall()
+    conn.close()
+    return rows
+
+
+def sum_actual_hours_from_rows(rows, month):
+    """ファイルサーバーから読み込んだ他メンバー分のCSV行(dict)から、対象月の案件別稼働時間を集計する"""
+    totals = {}
+    for r in rows:
+        start_time = r.get("start_time") or ""
+        if not start_time.startswith(month):
+            continue
+        try:
+            start = datetime.fromisoformat(start_time)
+            end = datetime.fromisoformat(r["end_time"])
+        except (ValueError, KeyError):
+            continue
+        try:
+            project_id = int(r.get("project_id"))
+        except (TypeError, ValueError):
+            continue
+        hours = (end - start).total_seconds() / 3600
+        totals[project_id] = totals.get(project_id, 0) + hours
+    return totals
 
 
 def sum_actual_hours_for_month(month):

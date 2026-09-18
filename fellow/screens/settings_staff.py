@@ -1,5 +1,6 @@
 import flet as ft
 import db
+import sync
 
 
 def build_staff_view(page: ft.Page, staff_id: int):
@@ -38,6 +39,7 @@ def build_staff_view(page: ft.Page, staff_id: int):
     def on_delete(sid):
         db.delete_staff(sid)
         refresh()
+        sync.push_staff()
 
     def on_add(e):
         if not name_field.value:
@@ -52,6 +54,9 @@ def build_staff_view(page: ft.Page, staff_id: int):
         name_field.value = ""
         capacity_field.value = "160"
         refresh()
+        result = sync.push_staff()
+        page.open(ft.SnackBar(ft.Text(result.message)))
+        page.update()
 
     add_button = ft.Button("要員を追加", icon=ft.Icons.ADD, bgcolor=ft.Colors.INDIGO, color=ft.Colors.WHITE, on_click=on_add)
 

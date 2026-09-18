@@ -1,5 +1,6 @@
 import flet as ft
 import db
+import sync
 
 
 def build_projects_view(page: ft.Page, staff_id: int):
@@ -50,6 +51,7 @@ def build_projects_view(page: ft.Page, staff_id: int):
     def on_delete(pid):
         db.delete_project(pid)
         refresh()
+        sync.push_projects()
 
     def on_add(e):
         if not name_field.value:
@@ -67,6 +69,9 @@ def build_projects_view(page: ft.Page, staff_id: int):
         end_field.value = ""
         keywords_field.value = ""
         refresh()
+        result = sync.push_projects()
+        page.open(ft.SnackBar(ft.Text(result.message)))
+        page.update()
 
     add_button = ft.Button("案件を追加", icon=ft.Icons.ADD, bgcolor=ft.Colors.INDIGO, color=ft.Colors.WHITE, on_click=on_add)
 

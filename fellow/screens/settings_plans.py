@@ -1,6 +1,7 @@
 import flet as ft
 from datetime import date
 import db
+import sync
 
 
 def build_plans_view(page: ft.Page, staff_id: int):
@@ -49,7 +50,8 @@ def build_plans_view(page: ft.Page, staff_id: int):
             except ValueError:
                 hours = 0
             db.set_plan(project_id, sid, month, hours)
-        page.open(ft.SnackBar(ft.Text("計画工数を保存しました")))
+        result = sync.push_plans(month)
+        page.open(ft.SnackBar(ft.Text(result.message)))
         build_matrix()
 
     month_field.on_change = lambda e: build_matrix()

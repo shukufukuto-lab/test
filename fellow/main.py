@@ -2,6 +2,7 @@ import flet as ft
 from datetime import datetime, timedelta
 
 import db
+import sync
 from screens.home import build_home_view
 from screens.manual import build_manual_view
 from screens.dashboard import build_dashboard_view
@@ -21,6 +22,16 @@ def main(page: ft.Page):
     page.padding = 0
 
     db.init_db()
+
+    sync_status = ft.Text("", size=12, color=ft.Colors.GREY_600)
+
+    def do_sync(show_snackbar=False):
+        result = sync.pull_masters()
+        sync_status.value = result.message
+        sync_status.color = ft.Colors.GREY_600 if result.ok else ft.Colors.ORANGE_700
+        if show_snackbar:
+            page.open(ft.SnackBar(ft.Text(result.message)))
+        page.update()
 
     content_area = ft.Container(expand=True, padding=24)
 
@@ -57,17 +68,26 @@ def main(page: ft.Page):
         on_change=on_nav_change,
     )
 
+    refresh_button = ft.IconButton(icon=ft.Icons.SYNC, tooltip="ファイルサーバーと同期", on_click=lambda e: do_sync(show_snackbar=True))
+
     page.add(
         ft.Row(
             [
                 rail,
                 ft.VerticalDivider(width=1),
-                content_area,
+                ft.Column(
+                    [
+                        ft.Row([ft.Container(expand=True), sync_status, refresh_button]),
+                        content_area,
+                    ],
+                    expand=True,
+                ),
             ],
             expand=True,
         )
     )
 
+    do_sync()
     show(build_home_view)
 
 

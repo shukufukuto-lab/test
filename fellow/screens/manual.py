@@ -1,6 +1,7 @@
 import flet as ft
 from datetime import datetime, date
 import db
+import sync
 
 
 def build_manual_view(page: ft.Page, staff_id: int):
@@ -47,6 +48,9 @@ def build_manual_view(page: ft.Page, staff_id: int):
     def on_delete(eid):
         db.delete_time_entry(eid)
         refresh_list()
+        staff_name = db.get_staff_name(staff_id)
+        if staff_name:
+            sync.push_my_actuals(staff_name)
 
     def on_add(e):
         if not project_dropdown.value:
@@ -72,6 +76,9 @@ def build_manual_view(page: ft.Page, staff_id: int):
         )
         memo_field.value = ""
         refresh_list()
+        staff_name = db.get_staff_name(staff_id)
+        if staff_name:
+            sync.push_my_actuals(staff_name)
 
     add_button = ft.Button("追加", icon=ft.Icons.ADD, bgcolor=ft.Colors.INDIGO, color=ft.Colors.WHITE, on_click=on_add)
     date_field.on_change = lambda e: refresh_list()
