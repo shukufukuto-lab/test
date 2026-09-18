@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+fellow.db
+python-embed/
+python-embed.zip
